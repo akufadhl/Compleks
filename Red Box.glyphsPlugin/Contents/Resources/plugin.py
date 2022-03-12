@@ -11,90 +11,114 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
-from inspect import trace
 import traceback
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
-import GlyphsApp.drawingTools as drawBot
-import vanilla
-import AppKit
+import GlyphsApp.drawingTools as drawBot 
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight
+import os, vanilla
 import uharfbuzz as hb
-import os
 
-class CanvasView_view(AppKit.NSView):
-	
-	def init(self):
-		self = super(CanvasView_view, self).init()
-		self._Text = ""
-		return self
 
-	def process_(self, text):
-		self._Text = text
-		print(self._Text)
-		self.setNeedsDisplay_(True)
+class CanvasView_view(NSView):
 
-	def drawRect_(self,rect):
+		def init(self):
+			self = super(CanvasView_view, self).init()
+			self._Text = ""
+			self._Binary = ""
+			return self
 
-		AppKit.NSColor.whiteColor().set()
-		AppKit.NSBezierPath.fillRect_(rect)
-		
-		Width = AppKit.NSWidth(self.frame())
-		Height = AppKit.NSHeight(self.frame())
-		
-		f = Glyphs.font
-		m = f.selectedFontMaster
-		scale = 0.444444 / (f.upm / min(Width, Height))
-		drawBot.scale(scale)
-		drawBot.translate(Width/10 , f.upm/1.5)
-		if f is None:
-			return
+		def process_(self, text):
+			self._Text = text
+			self._Binary = self.wrapper._binaryFont
+			print(self._Binary)
 
-		#Process string and get glyphs info using uharfbuzz
+			blob = hb.Blob.from_file_path(self._Binary)
+			face = hb.Face(blob)
+			font = hb.Font(face)
 
-		letters = self.wrapper._letters
+			buf = hb.Buffer()
+			buf.add_str(str(self._Text))
+			buf.guess_segment_properties()
+			hb.shape(font, buf)
 
-		#print(letters)
+			infos = buf.glyph_infos
+			positions = buf.glyph_positions
 
-		#layers = f.selectedLayers
-		drawBot.translate(x = 45, y= 45)
-		
-		if not letters:
-			return
+			for info, pos in zip(infos, positions):
+				gid = info.codepoint
+				glyphname = font.get_glyph_name(gid)
+				xAdv = pos.x_advance
+				yAdv = pos.y_advance
+				xOff = pos.x_offset
+				yOff = pos.y_offset
+				print(gid, glyphname, xAdv, yAdv, xOff, yOff)
 
-		pathToDraw = None
+			print(self._Text)
 
-		try:
-			pathToDraw = letters
-		except:
-			print(traceback.format_exc())
-		
-		if pathToDraw is None:
-			return
-		
-		try:
-			width = []
-			glyphs = []
+			self.setNeedsDisplay_(True)
 
-			for letter in letters:
-				width.append(int(f.glyphs[letter].layers[m.id].width))
-				glyphs.append(f.glyphs[letter].layers[m.id].completeBezierPath)
+		def drawRect_(self,rect):
 
-			width.insert(0,0)
-			glyphToDraw = tuple(zip(width,glyphs))
+			NSColor.whiteColor().set()
+			NSBezierPath.fillRect_(rect)
+			
+			Width = NSWidth(self.frame())
+			Height = NSHeight(self.frame())
+			
+			f = Glyphs.font
+			m = f.selectedFontMaster
+			scale = 0.444444 / (f.upm / min(Width, Height))
+			drawBot.scale(scale)
+			drawBot.translate(Width/10 , f.upm/1.5)
+			if f is None:
+				return
 
-			advanceX = 0
-			for idx, bezier in enumerate(glyphToDraw):
-				
-				advanceX, y = int(bezier[0]) , 0
-				drawBot.translate(advanceX,0)
-				drawBot.drawPath(bezier[1])
-				AppKit.NSColor.blackColor().set()
-				
+			#Process string and get glyphs info using uharfbuzz
 
-		except:
-			print(traceback.format_exc())
+			letters = self.wrapper._letters
 
+			#print(letters)
+
+			#layers = f.selectedLayers
+			drawBot.translate(x = 45, y= 45)
+			
+			if not letters:
+				return
+
+			pathToDraw = None
+
+			try:
+				pathToDraw = letters
+			except:
+				print(traceback.format_exc())
+			
+			if pathToDraw is None:
+				return
+			
+			try:
+				width = []
+				glyphs = []
+
+				for letter in letters:
+					width.append(int(f.glyphs[letter].layers[m.id].width))
+					glyphs.append(f.glyphs[letter].layers[m.id].completeBezierPath)
+
+				width.insert(0,0)
+				glyphToDraw = tuple(zip(width,glyphs))
+
+				advanceX = 0
+				for idx, bezier in enumerate(glyphToDraw):
+					
+					advanceX, y = int(bezier[0]) , 0
+					drawBot.translate(advanceX,0)
+					drawBot.drawPath(bezier[1])
+					NSColor.blackColor().set()
+					
+
+			except:
+				print(traceback.format_exc())
 
 
 class CanvasView(vanilla.Group):
@@ -102,6 +126,7 @@ class CanvasView(vanilla.Group):
 
 		def __init__(self, posSize):
 			self._letters = ""
+			self._binaryFont = ""
 			self._setupView(self.nsViewClass, posSize)
 			self.getNSView().delegate = self
 			self._nsObject.wrapper = self
@@ -109,8 +134,8 @@ class CanvasView(vanilla.Group):
 		def redraw(self):
 			self._nsObject.setNeedsDisplay_(True)
 		
-		def process(self, text):
-			self.getNSView().process_(text)
+		def process(self, texts):
+			self.getNSView().process_(texts)
 
 
 
@@ -129,53 +154,75 @@ class ____PluginClassName____(GeneralPlugin):
 		Glyphs.menu[EDIT_MENU].append(newMenuItem)
 
 	def showWindow_(self, sender):
-		"""Do something like show a window """
-		self.windowH = 250
-		self.windowW = 800
+		try:
+			"""Do something like show a window """
+			self.windowH = 250
+			self.windowW = 800
+			
 
-		self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
-		self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
-		self.w.exportInstance = vanilla.Button(((self.windowW-90), 10, -10, 20), "Export", callback= self.Export)
-		self.w.preview = CanvasView((0,45,0,0))
-		self.w.open()
-		self.changeView_(None)
-		Glyphs.addCallback(self.changeView_, UPDATEINTERFACE)
-		print("show Windows")
-
+			self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
+			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
+			self.w.exportInstance = vanilla.Button(((self.windowW-90), 10, -10, 20), "Export")
+			#self.w.preview = CanvasView((0,45,0,0))
+			self.w.view = CanvasView((0,45,0,0))
+			self.w.open()
+			self.Export_(None)
+			self.changeView_(None)
+			Glyphs.addCallback(self.Export_)
+			Glyphs.addCallback(self.changeView_, UPDATEINTERFACE)
+			print("show Windows")
+		except:
+			print(traceback.format_exc())
 	@objc.python_method
 	def __del__(self):
 		Glyphs.removeCallback(self.changeView_, UPDATEINTERFACE)
+		Glyphs.removeCallback(self.Export_)
 
 	@objc.python_method
 	def textViewer(self, sender):
 		try:
-			self.w.preview._letters = self.w.textEdit.get()
-			self.w.preview.redraw()
+			self.w.view._letters = self.w.textEdit.get()
+			self.w.view.redraw()
 			texts = self.w.textEdit.get()
-			self.w.preview.process(texts)
+			self.w.view._binaryFont = self.getBinary()
+			self.w.view.process(texts)
 		except:
 			print(traceback.format_exc())
 
 	def changeView_(self, sender):
 		try:
-			self.w.preview._letters = self.w.textEdit.get()
-			texts = self.w.textEdit.get()
-			self.w.preview.process(texts)
-			self.w.preview.redraw()
+			self.w.view._letters = self.w.textEdit.get()
+			self.w.view.redraw()
+		except:
+			print(traceback.format_exc())
+	
+	def getBinary(self):
+		try:
+			#path = os.path.expanduser("~/Library/Application Support/Glyphs 3/Temp")
+			path = os.path.expanduser("~/Documents")
+			binaryPath = ""
+			for instance in Glyphs.font.instances:
+				binaryPath += f"{path}/{instance.fontName}.otf"
+			
+			#print(binaryPath)
+			return binaryPath
+
 		except:
 			print(traceback.format_exc())
 
-	@objc.python_method
-	def Export(self, sender):
+	#@objc.python_method
+	def Export_(self, sender):
 		try:
-			#path = os.path.expanduser("~/Library/Application Support/Glyphs 3/Temp")
-			path = os.path.expanduser("~/Desktop")
-
+			path = os.path.expanduser("~/Documents")
+			binaryPath = ""
 			print("Generating ...")
 			for instance in Glyphs.font.instances:
 				instance.generate(FontPath = path)
 
-				print(f"Generated {instance}")
+				print(f"Generated {instance.font.familyName}-{instance.name}.otf")
+				binaryPath += f"{path}/{instance.font.familyName}-{instance.name}.otf "
+				print(binaryPath)
+
 		except:
 			print(traceback.format_exc())
 
