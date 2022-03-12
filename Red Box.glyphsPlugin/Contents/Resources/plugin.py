@@ -11,7 +11,7 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
-from math import fabs
+from inspect import trace
 import traceback
 import objc
 from GlyphsApp import *
@@ -23,9 +23,16 @@ import uharfbuzz as hb
 import os
 
 class CanvasView_view(AppKit.NSView):
+	
+	def init(self):
+		self = super(CanvasView_view, self).init()
+		self._Text = ""
+		return self
 
-	def processText(self, text):
-		pass
+	def process_(self, text):
+		self._Text = text
+		print(self._Text)
+		self.setNeedsDisplay_(True)
 
 	def drawRect_(self,rect):
 
@@ -47,7 +54,7 @@ class CanvasView_view(AppKit.NSView):
 
 		letters = self.wrapper._letters
 
-		print(letters)
+		#print(letters)
 
 		#layers = f.selectedLayers
 		drawBot.translate(x = 45, y= 45)
@@ -90,16 +97,22 @@ class CanvasView_view(AppKit.NSView):
 
 
 
-class CanvasView(vanilla.VanillaBaseObject):
+class CanvasView(vanilla.Group):
 		nsViewClass = CanvasView_view
 
 		def __init__(self, posSize):
 			self._letters = ""
 			self._setupView(self.nsViewClass, posSize)
+			self.getNSView().delegate = self
 			self._nsObject.wrapper = self
 
 		def redraw(self):
 			self._nsObject.setNeedsDisplay_(True)
+		
+		def process(self, text):
+			self.getNSView().process_(text)
+
+
 
 class ____PluginClassName____(GeneralPlugin):
 
@@ -108,9 +121,6 @@ class ____PluginClassName____(GeneralPlugin):
 		self.name = Glyphs.localize({
 		'en': 'Red Block',
 		'de': 'Rot Block',
-		'fr': 'Ma extension générale',
-		'es': 'Mi plugin general',
-		'pt': 'Meu plug-in geral',
 		})
 
 	@objc.python_method
@@ -125,7 +135,7 @@ class ____PluginClassName____(GeneralPlugin):
 
 		self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
 		self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
-		self.w.exportInstance = vanilla.Button(((self.windowW-90), 10, -10, 20), "Export")
+		self.w.exportInstance = vanilla.Button(((self.windowW-90), 10, -10, 20), "Export", callback= self.Export)
 		self.w.preview = CanvasView((0,45,0,0))
 		self.w.open()
 		self.changeView_(None)
@@ -138,16 +148,36 @@ class ____PluginClassName____(GeneralPlugin):
 
 	@objc.python_method
 	def textViewer(self, sender):
-		self.w.preview._letters = self.w.textEdit.get()
-		self.w.preview.redraw()
+		try:
+			self.w.preview._letters = self.w.textEdit.get()
+			self.w.preview.redraw()
+			texts = self.w.textEdit.get()
+			self.w.preview.process(texts)
+		except:
+			print(traceback.format_exc())
 
 	def changeView_(self, sender):
-		self.w.preview._letters = self.w.textEdit.get()
-		self.w.preview.redraw()
+		try:
+			self.w.preview._letters = self.w.textEdit.get()
+			texts = self.w.textEdit.get()
+			self.w.preview.process(texts)
+			self.w.preview.redraw()
+		except:
+			print(traceback.format_exc())
 
 	@objc.python_method
 	def Export(self, sender):
-		print("Export")
+		try:
+			#path = os.path.expanduser("~/Library/Application Support/Glyphs 3/Temp")
+			path = os.path.expanduser("~/Desktop")
+
+			print("Generating ...")
+			for instance in Glyphs.font.instances:
+				instance.generate(FontPath = path)
+
+				print(f"Generated {instance}")
+		except:
+			print(traceback.format_exc())
 
 	@objc.python_method
 	def __file__(self):
