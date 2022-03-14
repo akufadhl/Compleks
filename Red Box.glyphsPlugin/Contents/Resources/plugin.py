@@ -16,73 +16,39 @@ import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 import GlyphsApp.drawingTools as drawBot 
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform
 import os, vanilla
 import uharfbuzz as hb
+
 
 
 class CanvasView_view(NSView):
 
 		def init(self):
 			self = super(CanvasView_view, self).init()
-			self._Text = ""
-			self._Binary = ""
 			return self
 
-		def process_(self, text):
-			self._Text = text
-			self._Binary = self.wrapper._binaryFont
-			print(self._Binary)
-
-			blob = hb.Blob.from_file_path(self._Binary)
-			face = hb.Face(blob)
-			font = hb.Font(face)
-
-			buf = hb.Buffer()
-			buf.add_str(str(self._Text))
-			buf.guess_segment_properties()
-			hb.shape(font, buf)
-
-			infos = buf.glyph_infos
-			positions = buf.glyph_positions
-
-			for info, pos in zip(infos, positions):
-				gid = info.codepoint
-				glyphname = font.get_glyph_name(gid)
-				xAdv = pos.x_advance
-				yAdv = pos.y_advance
-				xOff = pos.x_offset
-				yOff = pos.y_offset
-				print(gid, glyphname, xAdv, yAdv, xOff, yOff)
-
-			print(self._Text)
-
-			self.setNeedsDisplay_(True)
-
 		def drawRect_(self,rect):
+			try:
+				f = Glyphs.font
+				m = f.selectedFontMaster
 
-			NSColor.whiteColor().set()
-			NSBezierPath.fillRect_(rect)
-			
-			Width = NSWidth(self.frame())
-			Height = NSHeight(self.frame())
-			
-			f = Glyphs.font
-			m = f.selectedFontMaster
-			scale = 0.444444 / (f.upm / min(Width, Height))
-			drawBot.scale(scale)
-			drawBot.translate(Width/10 , f.upm/1.5)
-			if f is None:
-				return
+				NSColor.whiteColor().set()
+				NSBezierPath.fillRect_(rect)
+				
+				Width = NSWidth(self.frame())
+				Height = NSHeight(self.frame())
+
+				scale = 0.3 / (f.upm / min(Width, Height))
+
+				if f is None:
+					return
+			except:
+				print("Error:", traceback.format_exc())
 
 			#Process string and get glyphs info using uharfbuzz
-
-			letters = self.wrapper._letters
-
-			#print(letters)
-
-			#layers = f.selectedLayers
-			drawBot.translate(x = 45, y= 45)
+			letters =	self.wrapper._letters
+			Binary = self.wrapper._binaryFont
 			
 			if not letters:
 				return
@@ -98,44 +64,75 @@ class CanvasView_view(NSView):
 				return
 			
 			try:
-				width = []
-				glyphs = []
 
-				for letter in letters:
-					width.append(int(f.glyphs[letter].layers[m.id].width))
-					glyphs.append(f.glyphs[letter].layers[m.id].completeBezierPath)
+				blob = hb.Blob.from_file_path(Binary)
+				face = hb.Face(blob)
+				font = hb.Font(face)
 
-				width.insert(0,0)
-				glyphToDraw = tuple(zip(width,glyphs))
+				buf = hb.Buffer()
+				buf.add_str(str(letters))
+				buf.guess_segment_properties()
+				hb.shape(font, buf)
 
-				advanceX = 0
-				for idx, bezier in enumerate(glyphToDraw):
+				infos = buf.glyph_infos
+				positions = buf.glyph_positions
+
+				xAdv, yAdv = 0, 0
+				for info, pos in zip(infos, positions):
+					xOff = pos.x_offset
+					yOff = pos.y_offset	
+
+					gid = info.codepoint
+					glyphname = font.get_glyph_name(gid)
+					glyphName = Glyphs.niceGlyphName(glyphname)
+
+					fullpath = NSBezierPath.alloc().init()
+					path = f.glyphs[glyphName].layers[m.id].completeBezierPath
+
+					transform = NSAffineTransform.transform()
+					transform.translateXBy_yBy_(xAdv+xOff, yAdv+yOff)
+					path.transformUsingAffineTransform_( transform )
 					
-					advanceX, y = int(bezier[0]) , 0
-					drawBot.translate(advanceX,0)
-					drawBot.drawPath(bezier[1])
-					NSColor.blackColor().set()
 					
+					xAdv += pos.x_advance
+					yAdv += pos.y_advance
 
+					print(glyphName, xAdv, yAdv, xOff, yOff)
+					transform = NSAffineTransform.transform()
+					transform.scaleBy_( scale )
+					path.transformUsingAffineTransform_( transform )
+
+					transform = NSAffineTransform.transform()
+					transform.translateXBy_yBy_(20, Height/2)
+					path.transformUsingAffineTransform_(transform)
+
+					fullpath.appendBezierPath_(path)
+					NSColor.redColor().set()
+					fullpath.fill()
+
+					#drawBot.translate(x = 0, y = 0)
+					#drawBot.drawPath(path)
+					#drawBot.translate(x = glyph[1]/2, y = glyph[2])
+					
 			except:
 				print(traceback.format_exc())
 
 
-class CanvasView(vanilla.Group):
+class CanvasView(vanilla.VanillaBaseObject):
 		nsViewClass = CanvasView_view
 
 		def __init__(self, posSize):
 			self._letters = ""
 			self._binaryFont = ""
 			self._setupView(self.nsViewClass, posSize)
-			self.getNSView().delegate = self
+			#self.getNSView().delegate = self
 			self._nsObject.wrapper = self
 
 		def redraw(self):
 			self._nsObject.setNeedsDisplay_(True)
 		
-		def process(self, texts):
-			self.getNSView().process_(texts)
+		# def process(self, texts):
+		# 	self.getNSView().process_(texts)
 
 
 
@@ -162,7 +159,7 @@ class ____PluginClassName____(GeneralPlugin):
 
 			self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
-			self.w.exportInstance = vanilla.Button(((self.windowW-90), 10, -10, 20), "Export")
+			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export")
 			#self.w.preview = CanvasView((0,45,0,0))
 			self.w.view = CanvasView((0,45,0,0))
 			self.w.open()
@@ -185,7 +182,7 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.view.redraw()
 			texts = self.w.textEdit.get()
 			self.w.view._binaryFont = self.getBinary()
-			self.w.view.process(texts)
+			#self.w.view.process(texts)
 		except:
 			print(traceback.format_exc())
 
@@ -217,10 +214,10 @@ class ____PluginClassName____(GeneralPlugin):
 			binaryPath = ""
 			print("Generating ...")
 			for instance in Glyphs.font.instances:
-				instance.generate(FontPath = path)
+				instance.generate(FontPath = path, UseProductionNames = False)
 
-				print(f"Generated {instance.font.familyName}-{instance.name}.otf")
-				binaryPath += f"{path}/{instance.font.familyName}-{instance.name}.otf "
+				print(f"Generated {instance.fontName}.otf")
+				binaryPath += f"{path}/{instance.fontName}.otf "
 				print(binaryPath)
 
 		except:
