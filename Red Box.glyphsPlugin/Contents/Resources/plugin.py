@@ -15,11 +15,9 @@ import traceback
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
-import GlyphsApp.drawingTools as drawBot 
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform
 import os, vanilla
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform
 import uharfbuzz as hb
-
 
 
 class CanvasView_view(NSView):
@@ -31,7 +29,6 @@ class CanvasView_view(NSView):
 		def drawRect_(self,rect):
 			try:
 				f = Glyphs.font
-				m = f.selectedFontMaster
 
 				NSColor.whiteColor().set()
 				NSBezierPath.fillRect_(rect)
@@ -49,6 +46,8 @@ class CanvasView_view(NSView):
 			#Process string and get glyphs info using uharfbuzz
 			letters =	self.wrapper._letters
 			Binary = self.wrapper._binaryFont
+			m = self.wrapper._m
+			print(Binary)
 			
 			if not letters:
 				return
@@ -87,7 +86,7 @@ class CanvasView_view(NSView):
 					glyphName = Glyphs.niceGlyphName(glyphname)
 
 					fullpath = NSBezierPath.alloc().init()
-					path = f.glyphs[glyphName].layers[m.id].completeBezierPath
+					path = f.glyphs[glyphName].layers[m].completeBezierPath
 
 					transform = NSAffineTransform.transform()
 					transform.translateXBy_yBy_(xAdv+xOff, yAdv+yOff)
@@ -97,7 +96,7 @@ class CanvasView_view(NSView):
 					xAdv += pos.x_advance
 					yAdv += pos.y_advance
 
-					print(glyphName, xAdv, yAdv, xOff, yOff)
+					
 					transform = NSAffineTransform.transform()
 					transform.scaleBy_( scale )
 					path.transformUsingAffineTransform_( transform )
@@ -109,6 +108,7 @@ class CanvasView_view(NSView):
 					fullpath.appendBezierPath_(path)
 					NSColor.redColor().set()
 					fullpath.fill()
+					print(glyphName, xAdv, yAdv, xOff, yOff)
 
 					#drawBot.translate(x = 0, y = 0)
 					#drawBot.drawPath(path)
@@ -117,24 +117,19 @@ class CanvasView_view(NSView):
 			except:
 				print(traceback.format_exc())
 
-
 class CanvasView(vanilla.VanillaBaseObject):
 		nsViewClass = CanvasView_view
 
 		def __init__(self, posSize):
 			self._letters = ""
 			self._binaryFont = ""
+			self._m = None
 			self._setupView(self.nsViewClass, posSize)
 			#self.getNSView().delegate = self
 			self._nsObject.wrapper = self
 
 		def redraw(self):
 			self._nsObject.setNeedsDisplay_(True)
-		
-		# def process(self, texts):
-		# 	self.getNSView().process_(texts)
-
-
 
 class ____PluginClassName____(GeneralPlugin):
 
@@ -153,15 +148,26 @@ class ____PluginClassName____(GeneralPlugin):
 	def showWindow_(self, sender):
 		try:
 			"""Do something like show a window """
-			self.windowH = 250
-			self.windowW = 800
+			self.windowH = 350
+			self.windowW = 900
 			
 
 			self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
-			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export")
+			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export", callback = self.Export_)
 			#self.w.preview = CanvasView((0,45,0,0))
-			self.w.view = CanvasView((0,45,0,0))
+			self.w.view = CanvasView((0,45,0,-45))
+			self.w.instanceName = vanilla.TextBox("auto", "Masters :")
+			self.w.fontSelector = vanilla.PopUpButton("auto", self.getMasters(), callback = self.textViewer)
+			
+			rules = [
+		    # Horizontal
+		    "H:|-[instanceName]-[fontSelector(>=190,<=2000)]-|",
+		    "V:[instanceName]-15-|",
+		    "V:[fontSelector]-12-|"
+		]
+			self.w.addAutoPosSizeRules(rules)
+
 			self.w.open()
 			self.Export_(None)
 			self.changeView_(None)
@@ -179,9 +185,11 @@ class ____PluginClassName____(GeneralPlugin):
 	def textViewer(self, sender):
 		try:
 			self.w.view._letters = self.w.textEdit.get()
-			self.w.view.redraw()
 			texts = self.w.textEdit.get()
-			self.w.view._binaryFont = self.getBinary()
+			binaries = self.getBinary()
+			self.w.view._m = self.w.fontSelector.get()
+			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
+			self.w.view.redraw()
 			#self.w.view.process(texts)
 		except:
 			print(traceback.format_exc())
@@ -193,15 +201,26 @@ class ____PluginClassName____(GeneralPlugin):
 		except:
 			print(traceback.format_exc())
 	
+	def getMasters(self):
+		try:
+			masters = []
+			for m in Glyphs.font.masters:
+				masters.append(m.name)
+			return masters
+		except:
+			print(traceback.format_exc())
+
 	def getBinary(self):
 		try:
 			#path = os.path.expanduser("~/Library/Application Support/Glyphs 3/Temp")
 			path = os.path.expanduser("~/Documents")
-			binaryPath = ""
-			for instance in Glyphs.font.instances:
-				binaryPath += f"{path}/{instance.fontName}.otf"
+			binaryPath = {}
+
+			for idx, m in enumerate(Glyphs.font.masters):
+				for instance in Glyphs.font.instances:
+					if instance.name == m.name:
+						binaryPath[idx] = path + "/" + instance.fontName + ".otf"
 			
-			#print(binaryPath)
 			return binaryPath
 
 		except:
@@ -211,15 +230,13 @@ class ____PluginClassName____(GeneralPlugin):
 	def Export_(self, sender):
 		try:
 			path = os.path.expanduser("~/Documents")
-			binaryPath = ""
+			
 			print("Generating ...")
-			for instance in Glyphs.font.instances:
-				instance.generate(FontPath = path, UseProductionNames = False)
-
-				print(f"Generated {instance.fontName}.otf")
-				binaryPath += f"{path}/{instance.fontName}.otf "
-				print(binaryPath)
-
+			for idx, m in enumerate(Glyphs.font.masters):
+				for instance in Glyphs.font.instances:
+					if instance.name == m.name:
+						instance.generate(FontPath = path, UseProductionNames = False)
+			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
 
