@@ -7,6 +7,7 @@ a tool to help preview the masters shaping, it needs atleast the OTFeatures for 
 
 ### Todo Lists for the Complex Preview
 - [x] export only masters
+- [ ] give warning for non-compatible glyphs
 - [ ] get the features toggle
 - [ ] Show the Instances instead of masters
 - [ ] ability to zoom/resize the text
