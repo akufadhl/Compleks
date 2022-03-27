@@ -3,7 +3,7 @@
 Complex plugin is a series of my personal GlyphsApp plugins to help me work with complex script. it consists of several plugins.
 
 ## Complex Preview
-![Complex Shaping preview] (/images/Complex Shaping.png)
+![Complex Shaping preview](/images/Complex\ Shaping.png)
 
 a tool to help preview the masters shaping, it needs atleast the OTFeatures for GPOS and GSUB for the plugin to works.
 
