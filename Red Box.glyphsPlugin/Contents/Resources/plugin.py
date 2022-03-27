@@ -36,7 +36,7 @@ class CanvasView_view(NSView):
 				Width = NSWidth(self.frame())
 				Height = NSHeight(self.frame())
 
-				scale = 0.3 / (f.upm / min(Width, Height))
+				scale = 0.38 / (f.upm / min(Width, Height))
 
 				if f is None:
 					return
@@ -102,7 +102,7 @@ class CanvasView_view(NSView):
 					path.transformUsingAffineTransform_( transform )
 
 					transform = NSAffineTransform.transform()
-					transform.translateXBy_yBy_(20, Height/2)
+					transform.translateXBy_yBy_(20, Height/2.4)
 					path.transformUsingAffineTransform_(transform)
 
 					fullpath.appendBezierPath_(path)
@@ -136,8 +136,7 @@ class ____PluginClassName____(GeneralPlugin):
 	@objc.python_method
 	def settings(self):
 		self.name = Glyphs.localize({
-		'en': 'Red Block',
-		'de': 'Rot Block',
+		'en': 'Complex Shaping',
 		})
 
 	@objc.python_method
@@ -152,7 +151,7 @@ class ____PluginClassName____(GeneralPlugin):
 			self.windowW = 900
 			
 
-			self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH))
+			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Shaping", minSize=(self.windowW, self.windowH))
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
 			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export", callback = self.Export_)
 			#self.w.preview = CanvasView((0,45,0,0))
@@ -162,7 +161,7 @@ class ____PluginClassName____(GeneralPlugin):
 			
 			rules = [
 		    # Horizontal
-		    "H:|-[instanceName]-[fontSelector(>=190,<=2000)]-|",
+		    "H:|-[instanceName]-[fontSelector(>=200,<=4000)]-|",
 		    "V:[instanceName]-15-|",
 		    "V:[fontSelector]-12-|"
 		]
