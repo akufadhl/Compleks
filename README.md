@@ -2,6 +2,12 @@
 
 Complex plugin is a series of my personal GlyphsApp plugins to help me work with complex script. it consists of several plugins.
 
+## General ToDo lists
+- [ ] integrate **Complex Spacer** with **Complex Shaper**
+- [ ] Display glyphs on a selected lists
+- [ ] a button to show which glyphs are colliding
+- [ ] A button to space them!
+
 ## Complex Preview
 ![Complex Shaping preview](/images/ComplexShaping.png)
 
