@@ -15,6 +15,7 @@ a tool to help preview the masters shaping, it needs atleast the OTFeatures for 
 
 ### ToDo lists for the Complex Preview
 - [x] export only masters
+- [ ] separate shaping for each words
 - [ ] give warning for non-compatible glyphs
 - [ ] get the features toggle
 - [ ] Show the Instances instead of masters
