@@ -4,7 +4,7 @@ Complex plugin is a series of my personal GlyphsApp plugins to help me work with
 
 ## General ToDo lists
 - [ ] integrate **Complex Spacer** with **Complex Shaper**
-- [ ] Display glyphs on a selected lists
+- [ ] Display glyphs from a selected lists
 - [ ] a button to show which glyphs are colliding
 - [ ] A button to space them!
 
