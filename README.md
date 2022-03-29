@@ -13,7 +13,7 @@ Complex plugin is a series of my personal GlyphsApp plugins to help me work with
 
 a tool to help preview the masters shaping, it needs atleast the OTFeatures for GPOS and GSUB for the plugin to works.
 
-### Todo Lists for the Complex Preview
+### ToDo lists for the Complex Preview
 - [x] export only masters
 - [ ] give warning for non-compatible glyphs
 - [ ] get the features toggle
@@ -25,3 +25,7 @@ a tool to help preview the masters shaping, it needs atleast the OTFeatures for 
 
 ## Complex Spacer
 a tool to help kern and avoid collision in complx scripts. it only works for **Balinese** and **Javanese** for now.
+
+## ToDo lists for Complex Shaper
+- [ ] a spacing algorithm for top marks
+- [ ] class optimizations
