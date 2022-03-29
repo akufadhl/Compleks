@@ -234,7 +234,7 @@ class ____PluginClassName____(GeneralPlugin):
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
 					if instance.name == m.name:
-						instance.generate(FontPath = path, UseProductionNames = False)
+						instance.generate(FontPath = path,RemoveOverlap = False, AutoHint = False,UseProductionNames = False)
 			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
