@@ -1,4 +1,3 @@
-from subprocess import call
 import vanilla
 import AppKit
 

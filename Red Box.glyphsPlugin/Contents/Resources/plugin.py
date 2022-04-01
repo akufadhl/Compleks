@@ -16,7 +16,8 @@ import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 import os, vanilla
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform
+from vanilla.nsSubclasses import getNSSubclass
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen
 import uharfbuzz as hb
 
 
@@ -25,8 +26,10 @@ class CanvasView_view(NSView):
 		def init(self):
 			self = super(CanvasView_view, self).init()
 			return self
+		
 
 		def drawRect_(self,rect):
+
 			try:
 				f = Glyphs.font
 
@@ -75,7 +78,7 @@ class CanvasView_view(NSView):
 
 				infos = buf.glyph_infos
 				positions = buf.glyph_positions
-
+				
 				xAdv, yAdv = 0, 0
 				for info, pos in zip(infos, positions):
 					xOff = pos.x_offset
@@ -102,35 +105,33 @@ class CanvasView_view(NSView):
 					path.transformUsingAffineTransform_( transform )
 
 					transform = NSAffineTransform.transform()
-					transform.translateXBy_yBy_(20, Height/2.4)
+					transform.translateXBy_yBy_(20, Height/2.2)
 					path.transformUsingAffineTransform_(transform)
 
 					fullpath.appendBezierPath_(path)
-					NSColor.redColor().set()
+					NSColor.blackColor().set()
 					fullpath.fill()
 					print(glyphName, xAdv, yAdv, xOff, yOff)
 
-					#drawBot.translate(x = 0, y = 0)
-					#drawBot.drawPath(path)
-					#drawBot.translate(x = glyph[1]/2, y = glyph[2])
 					
 			except:
 				print(traceback.format_exc())
 
+
 class CanvasView(vanilla.VanillaBaseObject):
-		nsViewClass = CanvasView_view
+	
+	nsViewClass = CanvasView_view
 
-		def __init__(self, posSize):
-			self._letters = ""
-			self._binaryFont = ""
-			self._m = None
-			self._setupView(self.nsViewClass, posSize)
-			#self.getNSView().delegate = self
-			self._nsObject.wrapper = self
-
-		def redraw(self):
-			self._nsObject.setNeedsDisplay_(True)
-
+	def __init__(self, posSize):
+		self._letters = ""
+		self._binaryFont = ""
+		self._m = None
+		self._setupView(self.nsViewClass, posSize)
+		self._nsObject.wrapper = self
+		
+	def redraw(self):
+		self._nsObject.setNeedsDisplay_(True)
+	
 class ____PluginClassName____(GeneralPlugin):
 
 	@objc.python_method
@@ -147,15 +148,17 @@ class ____PluginClassName____(GeneralPlugin):
 	def showWindow_(self, sender):
 		try:
 			"""Do something like show a window """
-			self.windowH = 350
-			self.windowW = 900
+			self.windowH = 300
+			self.windowW = NSScreen.mainScreen().frame().size.width
 			
 
-			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Shaping", minSize=(self.windowW, self.windowH))
+			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Preview", minSize=((self.windowW/3), self.windowH))
+			try:
+				self.w.view = CanvasView((0,0,0,0))
+			except:
+				print(traceback.format_exc())
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
 			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export", callback = self.Export_)
-			#self.w.preview = CanvasView((0,45,0,0))
-			self.w.view = CanvasView((0,45,0,-45))
 			self.w.instanceName = vanilla.TextBox("auto", "Masters :")
 			self.w.fontSelector = vanilla.PopUpButton("auto", self.getMasters(), callback = self.textViewer)
 			
@@ -229,8 +232,14 @@ class ____PluginClassName____(GeneralPlugin):
 	def Export_(self, sender):
 		try:
 			path = os.path.expanduser("~/Documents")
+
+			print("Compiling Features..")
+			Glyphs.font.compileFeatures()
+			print("Features Compiled")
+
 			
 			print("Generating ...")
+
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
 					if instance.name == m.name:
