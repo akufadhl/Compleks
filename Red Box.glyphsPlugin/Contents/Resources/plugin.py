@@ -155,6 +155,7 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Preview", minSize=((self.windowW/3), self.windowH))
 			try:
 				self.w.view = CanvasView((0,0,0,0))
+				self.w.view._setFrame(self.w.getPosSize())
 			except:
 				print(traceback.format_exc())
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
