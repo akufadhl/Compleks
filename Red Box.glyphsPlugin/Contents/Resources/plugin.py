@@ -16,8 +16,7 @@ import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 import os, vanilla
-from vanilla.nsSubclasses import getNSSubclass
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSViewWidthSizable, NSViewHeightSizable
 import uharfbuzz as hb
 
 
@@ -26,16 +25,14 @@ class CanvasView_view(NSView):
 		def init(self):
 			self = super(CanvasView_view, self).init()
 			return self
-		
 
 		def drawRect_(self,rect):
 
 			try:
 				f = Glyphs.font
 
-				NSColor.whiteColor().set()
-				NSBezierPath.fillRect_(rect)
-				
+				#NSColor.whiteColor().set()
+				#NSBezierPath.fillRect_(rect)
 				Width = NSWidth(self.frame())
 				Height = NSHeight(self.frame())
 
@@ -50,7 +47,6 @@ class CanvasView_view(NSView):
 			letters =	self.wrapper._letters
 			Binary = self.wrapper._binaryFont
 			m = self.wrapper._m
-			print(Binary)
 			
 			if not letters:
 				return
@@ -66,7 +62,6 @@ class CanvasView_view(NSView):
 				return
 			
 			try:
-
 				blob = hb.Blob.from_file_path(Binary)
 				face = hb.Face(blob)
 				font = hb.Font(face)
@@ -98,8 +93,7 @@ class CanvasView_view(NSView):
 					
 					xAdv += pos.x_advance
 					yAdv += pos.y_advance
-
-					
+					Widths += pos.x_advance
 					transform = NSAffineTransform.transform()
 					transform.scaleBy_( scale )
 					path.transformUsingAffineTransform_( transform )
@@ -119,19 +113,23 @@ class CanvasView_view(NSView):
 
 
 class CanvasView(vanilla.VanillaBaseObject):
-	
-	nsViewClass = CanvasView_view
+	nsView = CanvasView_view
 
 	def __init__(self, posSize):
 		self._letters = ""
 		self._binaryFont = ""
 		self._m = None
-		self._setupView(self.nsViewClass, posSize)
+		self._posSize = posSize
+
+		self._setupView(self.nsView, posSize)
 		self._nsObject.wrapper = self
-		
+
 	def redraw(self):
 		self._nsObject.setNeedsDisplay_(True)
 	
+	def _getNSView(self):
+		return self._nsObject
+
 class ____PluginClassName____(GeneralPlugin):
 
 	@objc.python_method
@@ -149,13 +147,14 @@ class ____PluginClassName____(GeneralPlugin):
 		try:
 			"""Do something like show a window """
 			self.windowH = 300
-			self.windowW = NSScreen.mainScreen().frame().size.width
+			self.windowW = NSScreen.mainScreen().frame().size.width/1.5
 			
 
-			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Preview", minSize=((self.windowW/3), self.windowH))
+			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Preview", minSize=((self.windowW/2), self.windowH))
 			try:
 				self.w.view = CanvasView((0,0,0,0))
-				self.w.view._setFrame(self.w.getPosSize())
+				self.w.view._setFrame(((0,0),(self.windowW, self.windowH)))
+				self.w.scroll = vanilla.ScrollView((0,0,0,0), self.w.view._getNSView(), hasHorizontalScroller=True, hasVerticalScroller=False, drawsBackground=False)
 			except:
 				print(traceback.format_exc())
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
@@ -170,15 +169,16 @@ class ____PluginClassName____(GeneralPlugin):
 		    "V:[fontSelector]-12-|"
 		]
 			self.w.addAutoPosSizeRules(rules)
+			self.w.bind("close", self.close)
 
 			self.w.open()
 			self.Export_(None)
 			self.changeView_(None)
 			Glyphs.addCallback(self.Export_)
 			Glyphs.addCallback(self.changeView_, UPDATEINTERFACE)
-			print("show Windows")
 		except:
 			print(traceback.format_exc())
+
 	@objc.python_method
 	def __del__(self):
 		Glyphs.removeCallback(self.changeView_, UPDATEINTERFACE)
@@ -244,8 +244,25 @@ class ____PluginClassName____(GeneralPlugin):
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
 					if instance.name == m.name:
-						instance.generate(FontPath = path,RemoveOverlap = False, AutoHint = False,UseProductionNames = False)
+						instance.generate(FontPath = path,RemoveOverlap = False, AutoHint = False, UseProductionNames = False)
 			self.w.view.redraw()
+		except:
+			print(traceback.format_exc())
+	@objc.python_method
+	def close(self, sender):
+		try:
+
+			print("Removing File...", sender)
+
+			#path = os.path.expanduser("~/Library/Application Support/Glyphs 3/Temp")
+			path = os.path.expanduser("~/Documents")
+			for idx, m in enumerate(Glyphs.font.masters):
+				for instance in Glyphs.font.instances:
+					if instance.name == m.name:
+						os.remove( path + "/" + instance.fontName + ".otf")
+			
+			print("File Removed", sender)
+
 		except:
 			print(traceback.format_exc())
 
