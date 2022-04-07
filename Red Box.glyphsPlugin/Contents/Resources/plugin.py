@@ -15,9 +15,9 @@ import traceback
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
+import uharfbuzz as hb
 import os, vanilla
 from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSViewWidthSizable, NSViewHeightSizable
-import uharfbuzz as hb
 
 
 class CanvasView_view(NSView):
@@ -31,8 +31,8 @@ class CanvasView_view(NSView):
 			try:
 				f = Glyphs.font
 
-				#NSColor.whiteColor().set()
-				#NSBezierPath.fillRect_(rect)
+				NSColor.whiteColor().set()
+				NSBezierPath.fillRect_(rect)
 				Width = NSWidth(self.frame())
 				Height = NSHeight(self.frame())
 
@@ -81,10 +81,12 @@ class CanvasView_view(NSView):
 
 					gid = info.codepoint
 					glyphname = font.get_glyph_name(gid)
-					glyphName = Glyphs.niceGlyphName(glyphname)
+					
+					# glyphName = glyphname
+					#glyphName = Glyphs.niceGlyphName(glyphname)
 
 					fullpath = NSBezierPath.alloc().init()
-					path = f.glyphs[glyphName].layers[m].completeBezierPath
+					path = f.glyphs[glyphname].layers[m].completeBezierPath
 
 					transform = NSAffineTransform.transform()
 					transform.translateXBy_yBy_(xAdv+xOff, yAdv+yOff)
@@ -93,7 +95,7 @@ class CanvasView_view(NSView):
 					
 					xAdv += pos.x_advance
 					yAdv += pos.y_advance
-					Widths += pos.x_advance
+
 					transform = NSAffineTransform.transform()
 					transform.scaleBy_( scale )
 					path.transformUsingAffineTransform_( transform )
@@ -105,7 +107,7 @@ class CanvasView_view(NSView):
 					fullpath.appendBezierPath_(path)
 					NSColor.blackColor().set()
 					fullpath.fill()
-					print(glyphName, xAdv, yAdv, xOff, yOff)
+					print(glyphname, xAdv, yAdv, xOff, yOff)
 
 					
 			except:
@@ -207,8 +209,12 @@ class ____PluginClassName____(GeneralPlugin):
 	def getMasters(self):
 		try:
 			masters = []
+
 			for m in Glyphs.font.masters:
-				masters.append(m.name)
+				for instance in Glyphs.font.instances:
+					if instance.axes == m.axes:
+						masters.append(m.name)
+			
 			return masters
 		except:
 			print(traceback.format_exc())
@@ -221,9 +227,9 @@ class ____PluginClassName____(GeneralPlugin):
 
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
-					if instance.name == m.name:
+					if instance.axes == m.axes:
 						binaryPath[idx] = path + "/" + instance.fontName + ".otf"
-			
+			print(binaryPath)
 			return binaryPath
 
 		except:
@@ -243,7 +249,7 @@ class ____PluginClassName____(GeneralPlugin):
 
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
-					if instance.name == m.name:
+					if instance.axes == m.axes:
 						instance.generate(FontPath = path,RemoveOverlap = False, AutoHint = False, UseProductionNames = False)
 			self.w.view.redraw()
 		except:
@@ -258,7 +264,7 @@ class ____PluginClassName____(GeneralPlugin):
 			path = os.path.expanduser("~/Documents")
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
-					if instance.name == m.name:
+					if instance.axes == m.axes:
 						os.remove( path + "/" + instance.fontName + ".otf")
 			
 			print("File Removed", sender)
