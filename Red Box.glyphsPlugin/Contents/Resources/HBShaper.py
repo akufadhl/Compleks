@@ -81,38 +81,48 @@ class HBShaping:
             #             resultlist.append("After lookup %i: %s" % (int(lookup[0]), "|".join(glyphlist)))
             return handle_message, resultlist
     
-    def shape(self, text):
+    def shape(self, text, features=None, direction=None):
+        if features is None:
+            features = {}
+        
 
         blob = hb.Blob.from_file_path(self.fontData)
         buf = hb.Buffer()
-        buf.add_str(text)
+        buf.add_str(text) 
+
+        if direction is not None:
+            buf.direction(direction)
+
         buf.guess_segment_properties()
 
         msgfunc, history = self.buildMessageHistoryFunction(buf)
         buf.set_message_func(msgfunc)
 
-        hb.shape(self.font, buf)
+        hb.shape(self.font, buf, features)
 
         glyphOrder = self.glyphOrder
         infos = []
+        drawing = []
         for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
             infos.append((info.codepoint, glyphOrder[info.codepoint], info.cluster, *pos.position))
-        print([self.font.get_glyph_name(g.codepoint) for g in buf.glyph_infos])
-        #print(infos, history)
+        # print([self.font.get_glyph_name(g.codepoint) for g in buf.glyph_infos])
+
+            drawing.append(self.drawFromPath(info.codepoint))
+        print(drawing)
         return infos, history
 
         # gids_trace = [[g.codepoint for g in infos] for infos in infos_trace]
         # advances_trace = [[g.x_advance for g in pos] for pos in positions_trace if pos]
+        
     def drawFromPath(self, gid):
         
         pen = CocoaPen(None)
-        drawing = font.draw_glyph_with_pen(gid, pen)
-        
-        return drawing
+        self.font.draw_glyph_with_pen(gid, pen)
+
+        print(pen.path)
 
 fs = HBShaping.fromPath(Binary)
 fea = fs.features
-print(fea)
 fs.shape(letters)
 
 # fs01 = HBShaping.fromPath(Binary01)
