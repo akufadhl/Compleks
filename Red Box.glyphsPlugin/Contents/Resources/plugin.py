@@ -15,16 +15,16 @@ import traceback
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
-import uharfbuzz as hb
+from HBShaper import HBShaping
 import os, vanilla
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSViewWidthSizable, NSViewHeightSizable
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSFrameRect, NSRect
 
 
 class CanvasView_view(NSView):
 
-		def init(self):
-			self = super(CanvasView_view, self).init()
-			return self
+		# def init(self):
+		# 	self = super(CanvasView_view, self).init()
+		# 	return self
 
 		def drawRect_(self,rect):
 
@@ -44,9 +44,9 @@ class CanvasView_view(NSView):
 				print("Error:", traceback.format_exc())
 
 			#Process string and get glyphs info using uharfbuzz
-			letters =	self.wrapper._letters
 			Binary = self.wrapper._binaryFont
 			m = self.wrapper._m
+			letters = str(self.wrapper._letters)
 			
 			if not letters:
 				return
@@ -62,52 +62,43 @@ class CanvasView_view(NSView):
 				return
 			
 			try:
-				blob = hb.Blob.from_file_path(Binary)
-				face = hb.Face(blob)
-				font = hb.Font(face)
-
-				buf = hb.Buffer()
-				buf.add_str(str(letters))
-				buf.guess_segment_properties()
-				hb.shape(font, buf)
-
-				infos = buf.glyph_infos
-				positions = buf.glyph_positions
+				HB = HBShaping.fromPath(Binary)
 				
 				xAdv, yAdv = 0, 0
-				for info, pos in zip(infos, positions):
-					xOff = pos.x_offset
-					yOff = pos.y_offset	
+				shaper = HB.shape(letters)
 
-					gid = info.codepoint
-					glyphname = font.get_glyph_name(gid)
-					
-					# glyphName = glyphname
-					#glyphName = Glyphs.niceGlyphName(glyphname)
+				for i in shaper:
 
 					fullpath = NSBezierPath.alloc().init()
-					path = f.glyphs[glyphname].layers[m].completeBezierPath
+					print(f"f.glyphs[{i.glyphname}].layers[{m}].completeBezierPath")
+					path = f.glyphs[i.glyphname].layers[m].completeBezierPath
+					print()
 
 					transform = NSAffineTransform.transform()
-					transform.translateXBy_yBy_(xAdv+xOff, yAdv+yOff)
+					transform.translateXBy_yBy_(xAdv + i.xOff, yAdv + i.yOff)
 					path.transformUsingAffineTransform_( transform )
 					
-					
-					xAdv += pos.x_advance
-					yAdv += pos.y_advance
+					xAdv += i.xAd
+					yAdv += i.yAd
 
 					transform = NSAffineTransform.transform()
 					transform.scaleBy_( scale )
 					path.transformUsingAffineTransform_( transform )
-
+					
 					transform = NSAffineTransform.transform()
 					transform.translateXBy_yBy_(20, Height/2.2)
 					path.transformUsingAffineTransform_(transform)
 
+					print(path.bounds().size
+						, path.bounds().origin)
+					rect = NSRect( path.bounds().origin , path.bounds().size )
+					#fill rect with outline
+					NSColor.redColor().set()
+					NSFrameRect(rect)
+
 					fullpath.appendBezierPath_(path)
 					NSColor.blackColor().set()
 					fullpath.fill()
-					print(glyphname, xAdv, yAdv, xOff, yOff)
 
 					
 			except:
@@ -174,10 +165,13 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.bind("close", self.close)
 
 			self.w.open()
+			self.createNotdef_(None)
 			self.Export_(None)
 			self.changeView_(None)
+			Glyphs.addCallback(self.createNotdef_)
 			Glyphs.addCallback(self.Export_)
 			Glyphs.addCallback(self.changeView_, UPDATEINTERFACE)
+			
 		except:
 			print(traceback.format_exc())
 
@@ -185,6 +179,7 @@ class ____PluginClassName____(GeneralPlugin):
 	def __del__(self):
 		Glyphs.removeCallback(self.changeView_, UPDATEINTERFACE)
 		Glyphs.removeCallback(self.Export_)
+		Glyphs.removeCallback(self.createNotdef_)
 
 	@objc.python_method
 	def textViewer(self, sender):
@@ -229,7 +224,6 @@ class ____PluginClassName____(GeneralPlugin):
 				for instance in Glyphs.font.instances:
 					if instance.axes == m.axes:
 						binaryPath[idx] = path + "/" + instance.fontName + ".otf"
-			print(binaryPath)
 			return binaryPath
 
 		except:
@@ -245,12 +239,13 @@ class ____PluginClassName____(GeneralPlugin):
 			print("Features Compiled")
 
 			
-			print("Generating ...")
 
 			for idx, m in enumerate(Glyphs.font.masters):
 				for instance in Glyphs.font.instances:
 					if instance.axes == m.axes:
-						instance.generate(FontPath = path,RemoveOverlap = False, AutoHint = False, UseProductionNames = False)
+						instance.generate(Format = OTF, FontPath = path, RemoveOverlap = False, AutoHint = False, UseProductionNames = False)
+			
+			print("Files Generated")
 			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
@@ -271,6 +266,43 @@ class ____PluginClassName____(GeneralPlugin):
 
 		except:
 			print(traceback.format_exc())
+	
+	@objc.python_method
+	def createNotdef_(self, sender):
+		try:
+
+			font = Glyphs.font
+			notdef = font.glyphs['.notdef']
+			
+			if notdef:
+				print("notdef already exist")
+				return
+
+			elif not notdef:
+				newGlyph = GSGlyph()
+				newGlyph.name = '.notdef'
+				font.glyphs.append(newGlyph)
+				newGlyph.updateGlyphInfo()
+				self.drawSquare()
+			
+		except:
+			print(traceback.format_exc())
+		
+	def drawSquare(self):
+		
+		square = ((89,-135), (531, -135), (531,752), (89, 752))
+
+		for layer in Glyphs.font.glyphs['.notdef'].layers:
+			if layer.isMasterLayer:
+				pen = layer.getPen()
+				pen.moveTo(square[0])
+				for segment in square[1:]:
+					pen.lineTo(segment)
+				pen.closePath()
+				pen.endPath()
+			layer.leftMetricsKey = '=45'
+			layer.rightMetricsKey = '=|'
+			layer.syncMetrics()
 
 	@objc.python_method
 	def __file__(self):
