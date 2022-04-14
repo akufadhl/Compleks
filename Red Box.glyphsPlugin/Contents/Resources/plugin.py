@@ -88,18 +88,20 @@ class CanvasView_view(NSView):
 					transform = NSAffineTransform.transform()
 					transform.translateXBy_yBy_(20, Height/2.2)
 					path.transformUsingAffineTransform_(transform)
-
-					print(path.bounds().size
-						, path.bounds().origin)
-					rect = NSRect( path.bounds().origin , path.bounds().size )
-					#fill rect with outline
-					NSColor.redColor().set()
-					NSFrameRect(rect)
+					
+					if self.wrapper._showBound:
+						if path.bounds is None:
+							pass
+						rect = NSRect( path.bounds().origin , path.bounds().size )
+						#fill rect with outline
+						NSColor.redColor().set()
+						NSFrameRect(rect)
 
 					fullpath.appendBezierPath_(path)
 					NSColor.blackColor().set()
 					fullpath.fill()
-
+					print(self.wrapper._showBound)
+					
 					
 			except:
 				print(traceback.format_exc())
@@ -113,6 +115,7 @@ class CanvasView(vanilla.VanillaBaseObject):
 		self._binaryFont = ""
 		self._m = None
 		self._posSize = posSize
+		self._showBound = False
 
 		self._setupView(self.nsView, posSize)
 		self._nsObject.wrapper = self
@@ -139,7 +142,7 @@ class ____PluginClassName____(GeneralPlugin):
 	def showWindow_(self, sender):
 		try:
 			"""Do something like show a window """
-			self.windowH = 300
+			self.windowH = 350
 			self.windowW = NSScreen.mainScreen().frame().size.width/1.5
 			
 
@@ -154,12 +157,15 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export", callback = self.Export_)
 			self.w.instanceName = vanilla.TextBox("auto", "Masters :")
 			self.w.fontSelector = vanilla.PopUpButton("auto", self.getMasters(), callback = self.textViewer)
+			self.w.showBounds = vanilla.CheckBox("auto", "Show BoundingBox", callback = self.textViewer)
 			
 			rules = [
 		    # Horizontal
 		    "H:|-[instanceName]-[fontSelector(>=200,<=4000)]-|",
-		    "V:[instanceName]-15-|",
-		    "V:[fontSelector]-12-|"
+			"H:|-[showBounds]",
+		    "V:[instanceName]-15-[showBounds]",
+		    "V:[fontSelector]-12-[showBounds]",
+			"V:[fontSelector]-[showBounds]-12-|",
 		]
 			self.w.addAutoPosSizeRules(rules)
 			self.w.bind("close", self.close)
@@ -187,6 +193,7 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.view._letters = self.w.textEdit.get()
 			texts = self.w.textEdit.get()
 			binaries = self.getBinary()
+			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._m = self.w.fontSelector.get()
 			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
 			self.w.view.redraw()
@@ -196,6 +203,7 @@ class ____PluginClassName____(GeneralPlugin):
 
 	def changeView_(self, sender):
 		try:
+			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._letters = self.w.textEdit.get()
 			self.w.view.redraw()
 		except:
