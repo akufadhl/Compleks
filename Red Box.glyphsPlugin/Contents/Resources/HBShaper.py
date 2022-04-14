@@ -1,12 +1,25 @@
 from fontTools.ttLib import TTFont
-from fontTools.pens.cocoaPen import CocoaPen
 import uharfbuzz as hb
 import io
 
 Binary = "/Users/fadhlschriftlabor/Documents/NotoSansKhmer-Regular.otf"
-Binary01 = "/Users/fadhlschriftlabor/Documents/NotoSansMyanmar-Regular.otf"
-letters = "អិ"
-letters01 = "က္ခ"
+# Binary01 = "/Users/fadhlschriftlabor/Documents/NotoSansMyanmar-Regular.otf"
+letters = "ꦏ អក្សរខ្មែរ"
+# letters01 = "က္ခ"
+
+class GlyphInfo:
+
+    def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff):
+        self.gid = gid
+        self.glyphname = glyphname
+        self.xAd = xAd
+        self.yAd = yAd
+        self.xOff = xOff
+        self.yOff = yOff
+
+
+    def __repr__(self):
+        return "GlyphInfo(gid={}, glyphname={}, xAd={}, yAd={}, xOff={}, yOff={})".format(self.gid, self.glyphname, self.xAd, self.yAd, self.xOff, self.yOff)
 
 class HBShaping:
     
@@ -19,7 +32,7 @@ class HBShaping:
     def __init__(self, fontData, ttFont=None):
         self.fontData = fontData
 
-        self.face = hb.Face(fontData)
+        self.face = hb.Face(self.fontData)
         self.font = hb.Font(self.face)
         if ttFont is None:
             f = io.BytesIO(self.fontData)
@@ -27,7 +40,7 @@ class HBShaping:
         self._ttFont = ttFont
 
         self.glyphOrder = ttFont.getGlyphOrder()
-        self.features = self.getFeatures(self._ttFont)
+        #self.features = self.getFeatures(self._ttFont)
 
     def getFeatures(self, ttFont):
         ttFont = self._ttFont
@@ -85,8 +98,6 @@ class HBShaping:
         if features is None:
             features = {}
         
-
-        blob = hb.Blob.from_file_path(self.fontData)
         buf = hb.Buffer()
         buf.add_str(text) 
 
@@ -94,36 +105,27 @@ class HBShaping:
             buf.direction(direction)
 
         buf.guess_segment_properties()
+        buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
 
-        msgfunc, history = self.buildMessageHistoryFunction(buf)
-        buf.set_message_func(msgfunc)
+        #msgfunc = self.buildMessageHistoryFunction(buf)
+        #buf.set_message_func(msgfunc)
 
-        hb.shape(self.font, buf, features)
+        hb.shape(self.font, buf)
 
-        glyphOrder = self.glyphOrder
+        # glyphOrder = self.glyphOrder
         infos = []
-        drawing = []
+
         for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-            infos.append((info.codepoint, glyphOrder[info.codepoint], info.cluster, *pos.position))
-        # print([self.font.get_glyph_name(g.codepoint) for g in buf.glyph_infos])
+            #infos.append((info.codepoint, glyphOrder[info.codepoint], info.cluster, *pos.position))
+            glyphName = self.font.get_glyph_name(info.codepoint)
+            xAdv = pos.x_advance
+            yAdv = pos.y_advance
+            xOff = pos.x_offset
+            yOff = pos.y_offset
 
-            drawing.append(self.drawFromPath(info.codepoint))
-        print(drawing)
-        return infos, history
-
-        # gids_trace = [[g.codepoint for g in infos] for infos in infos_trace]
-        # advances_trace = [[g.x_advance for g in pos] for pos in positions_trace if pos]
+            infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff))
         
-    def drawFromPath(self, gid):
-        
-        pen = CocoaPen(None)
-        self.font.draw_glyph_with_pen(gid, pen)
+        return infos 
 
-        print(pen.path)
-
-fs = HBShaping.fromPath(Binary)
-fea = fs.features
-fs.shape(letters)
-
-# fs01 = HBShaping.fromPath(Binary01)
-# fs01.shape(letters01)
+s = HBShaping.fromPath(Binary)
+print(s.shape(letters))
