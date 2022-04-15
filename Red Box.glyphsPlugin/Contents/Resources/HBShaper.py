@@ -1,6 +1,7 @@
 from fontTools.ttLib import TTFont
+from fontTools.pens.cocoaPen import CocoaPen
 import uharfbuzz as hb
-import io
+import io, objc
 
 Binary = "/Users/fadhlschriftlabor/Documents/NotoSansKhmer-Regular.otf"
 # Binary01 = "/Users/fadhlschriftlabor/Documents/NotoSansMyanmar-Regular.otf"
@@ -41,6 +42,18 @@ class HBShaping:
 
         self.glyphOrder = ttFont.getGlyphOrder()
         #self.features = self.getFeatures(self._ttFont)
+
+    def getMetrics(self, ttFont):
+        ttFont = self._ttFont
+        #get metric from ttFont
+
+        ascender = ttFont['hhea'].ascent
+        descender = ttFont['hhea'].descent
+        xHeight = ttFont['OS/2'].sxHeight
+        capHeight = ttFont['OS/2'].sCapHeight
+
+        print("ascender: %s" % ascender, "descender: %s" % descender, "xHeight: %s" % xHeight, "capHeight: %s" % capHeight)
+        return ascender, descender, xHeight, capHeight
 
     def getFeatures(self, ttFont):
         ttFont = self._ttFont
@@ -122,10 +135,21 @@ class HBShaping:
             yAdv = pos.y_advance
             xOff = pos.x_offset
             yOff = pos.y_offset
+            path = self.drawPath(info.codepoint)
 
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff))
         
         return infos 
 
+    def drawPath(self, gid):
+        pen = CocoaPen(None)
+        self.font.draw_glyph_with_pen(gid, pen)
+        path = pen.path
+        #origin = path.bounds().origin
+        #size = path.bounds().size
+        #             
+        return pen.path
+
 s = HBShaping.fromPath(Binary)
 print(s.shape(letters))
+print(s.getMetrics(s._ttFont))

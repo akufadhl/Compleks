@@ -22,89 +22,79 @@ from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTra
 
 class CanvasView_view(NSView):
 
-		# def init(self):
-		# 	self = super(CanvasView_view, self).init()
-		# 	return self
+	def init(self):
+		self = super(CanvasView_view, self).init()
+		return self
+		
 
-		def drawRect_(self,rect):
+	def drawRect_(self,rect):
 
-			try:
-				f = Glyphs.font
+		try:
+			f = Glyphs.font
 
-				NSColor.whiteColor().set()
-				NSBezierPath.fillRect_(rect)
-				Width = NSWidth(self.frame())
-				Height = NSHeight(self.frame())
+			NSColor.whiteColor().set()
+			NSBezierPath.fillRect_(rect)
+			Width = NSWidth(self.frame())
+			Height = NSHeight(self.frame())
 
-				scale = 0.38 / (f.upm / min(Width, Height))
+			scale = 0.38 / (f.upm / min(Width, Height))
 
-				if f is None:
-					return
-			except:
-				print("Error:", traceback.format_exc())
-
-			#Process string and get glyphs info using uharfbuzz
-			Binary = self.wrapper._binaryFont
-			m = self.wrapper._m
-			letters = str(self.wrapper._letters)
-			
-			if not letters:
+			if f is None:
 				return
+		except:
+			print("Error:", traceback.format_exc())
 
-			pathToDraw = None
+		#Process string and get glyphs info using uharfbuzz
+		Binary = self.wrapper._binaryFont
+		m = self.wrapper._m
+		letters = str(self.wrapper._letters)
+		
+		if not letters:
+			return
 
-			try:
-				pathToDraw = letters
-			except:
-				print(traceback.format_exc())
+		try:
+			HB = HBShaping.fromPath(Binary)
 			
-			if pathToDraw is None:
-				return
-			
-			try:
-				HB = HBShaping.fromPath(Binary)
+			xAdv, yAdv = 0, 0
+			shaper = HB.shape(letters)
+
+			for i in shaper:
+
+				fullpath = NSBezierPath.alloc().init()
+				print(f"f.glyphs[{i.glyphname}].layers[{m}].completeBezierPath")
+				path = f.glyphs[i.glyphname].layers[m].completeBezierPath
+				print()
+
+				transform = NSAffineTransform.transform()
+				transform.translateXBy_yBy_(xAdv + i.xOff, yAdv + i.yOff)
+				path.transformUsingAffineTransform_( transform )
 				
-				xAdv, yAdv = 0, 0
-				shaper = HB.shape(letters)
+				xAdv += i.xAd
+				yAdv += i.yAd
 
-				for i in shaper:
+				transform = NSAffineTransform.transform()
+				transform.scaleBy_( scale )
+				path.transformUsingAffineTransform_( transform )
+				
+				transform = NSAffineTransform.transform()
+				transform.translateXBy_yBy_(20, Height/2.2)
+				path.transformUsingAffineTransform_(transform)
+				
+				if self.wrapper._showBound and (i.glyphname != "space"):
+					
+					rect = NSRect( path.bounds().origin , path.bounds().size )
+					#fill rect with outline
+					NSColor.redColor().set()
+					NSFrameRect(rect)
 
-					fullpath = NSBezierPath.alloc().init()
-					print(f"f.glyphs[{i.glyphname}].layers[{m}].completeBezierPath")
-					path = f.glyphs[i.glyphname].layers[m].completeBezierPath
-					print()
-
-					transform = NSAffineTransform.transform()
-					transform.translateXBy_yBy_(xAdv + i.xOff, yAdv + i.yOff)
-					path.transformUsingAffineTransform_( transform )
-					
-					xAdv += i.xAd
-					yAdv += i.yAd
-
-					transform = NSAffineTransform.transform()
-					transform.scaleBy_( scale )
-					path.transformUsingAffineTransform_( transform )
-					
-					transform = NSAffineTransform.transform()
-					transform.translateXBy_yBy_(20, Height/2.2)
-					path.transformUsingAffineTransform_(transform)
-					
-					if self.wrapper._showBound:
-						if path.bounds is None:
-							pass
-						rect = NSRect( path.bounds().origin , path.bounds().size )
-						#fill rect with outline
-						NSColor.redColor().set()
-						NSFrameRect(rect)
-
-					fullpath.appendBezierPath_(path)
-					NSColor.blackColor().set()
-					fullpath.fill()
-					print(self.wrapper._showBound)
-					
-					
-			except:
-				print(traceback.format_exc())
+				fullpath.appendBezierPath_(path)
+				NSColor.blackColor().set()
+				fullpath.fill()
+				print(self.wrapper._showBound)
+				
+				
+		except:
+			print(traceback.format_exc())
 
 
 class CanvasView(vanilla.VanillaBaseObject):
