@@ -57,6 +57,7 @@ class CanvasView_view(NSView):
 			
 			xAdv, yAdv = 0, 0
 			shaper = HB.shape(letters)
+			metrics = HB.getMetrics(HB._ttFont)
 
 			for i in shaper:
 
@@ -86,6 +87,15 @@ class CanvasView_view(NSView):
 					#fill rect with outline
 					NSColor.redColor().set()
 					NSFrameRect(rect)
+
+				for i in metrics:
+
+					p = NSBezierPath.alloc().init()
+
+					p.moveToPoint_(NSMakePoint(0, i))
+					p.lineToPoint_(NSMakePoint(1500 , i))
+					NSColor.redColor().set()
+					p.stroke()
 
 				fullpath.appendBezierPath_(path)
 				NSColor.blackColor().set()
