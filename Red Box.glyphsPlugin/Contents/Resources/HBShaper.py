@@ -3,20 +3,21 @@ from fontTools.pens.cocoaPen import CocoaPen
 import uharfbuzz as hb
 import io, objc
 
-Binary = "/Users/fadhlschriftlabor/Documents/NotoSansKhmer-Regular.otf"
+Binary = "/Users/fadhlschriftlabor/Repositories/slab-Ordina/EXPORT/1.005/CFF/Ordina-Regular.otf"
 # Binary01 = "/Users/fadhlschriftlabor/Documents/NotoSansMyanmar-Regular.otf"
-letters = "ꦏ អក្សរខ្មែរ"
+letters = "Ronnda"
 # letters01 = "က္ခ"
 
 class GlyphInfo:
 
-    def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff):
+    def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff, gWidth):
         self.gid = gid
         self.glyphname = glyphname
         self.xAd = xAd
         self.yAd = yAd
         self.xOff = xOff
         self.yOff = yOff
+        self.glyphWidth = gWidth
 
 
     def __repr__(self):
@@ -120,11 +121,10 @@ class HBShaping:
         buf.guess_segment_properties()
         buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
 
-        #msgfunc = self.buildMessageHistoryFunction(buf)
-        #buf.set_message_func(msgfunc)
+        # msgfunc = self.buildMessageHistoryFunction(buf)
+        # buf.set_message_func(msgfunc)
 
         hb.shape(self.font, buf)
-
         # glyphOrder = self.glyphOrder
         infos = []
 
@@ -135,9 +135,9 @@ class HBShaping:
             yAdv = pos.y_advance
             xOff = pos.x_offset
             yOff = pos.y_offset
-            path = self.drawPath(info.codepoint)
-
-            infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff))
+            width = self.font.get_glyph_extents(info.codepoint)
+            print(width.x_bearing, width.width)
+            infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
         
         return infos 
 

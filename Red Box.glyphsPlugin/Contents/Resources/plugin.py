@@ -11,13 +11,16 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
+from inspect import trace
+from tkinter import W
 import traceback
+from turtle import pos
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 from HBShaper import HBShaping
 import os, vanilla
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSFrameRect, NSRect
+from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSFrameRect, NSRect, NSMakePoint
 
 
 class CanvasView_view(NSView):
@@ -26,12 +29,10 @@ class CanvasView_view(NSView):
 		self = super(CanvasView_view, self).init()
 		return self
 		
-
 	def drawRect_(self,rect):
 
 		try:
 			f = Glyphs.font
-
 			NSColor.whiteColor().set()
 			NSBezierPath.fillRect_(rect)
 			Width = NSWidth(self.frame())
@@ -57,15 +58,11 @@ class CanvasView_view(NSView):
 			
 			xAdv, yAdv = 0, 0
 			shaper = HB.shape(letters)
-			metrics = HB.getMetrics(HB._ttFont)
 
 			for i in shaper:
 
 				fullpath = NSBezierPath.alloc().init()
-				print(f"f.glyphs[{i.glyphname}].layers[{m}].completeBezierPath")
 				path = f.glyphs[i.glyphname].layers[m].completeBezierPath
-				print()
-
 				transform = NSAffineTransform.transform()
 				transform.translateXBy_yBy_(xAdv + i.xOff, yAdv + i.yOff)
 				path.transformUsingAffineTransform_( transform )
@@ -81,31 +78,45 @@ class CanvasView_view(NSView):
 				transform.translateXBy_yBy_(20, Height/2.2)
 				path.transformUsingAffineTransform_(transform)
 				
-				if self.wrapper._showBound and (i.glyphname != "space"):
+				if self.wrapper._showBound: #and (i.glyphname != "space"):
+					try:
+						bounds = path.bounds()
+
+						rect = NSRect( bounds.origin , bounds.size )
+						#fill rect with outline
+						NSColor.greenColor().set()
+						NSFrameRect(rect)
 					
-					rect = NSRect( path.bounds().origin , path.bounds().size )
-					#fill rect with outline
-					NSColor.redColor().set()
-					NSFrameRect(rect)
-
-				for i in metrics:
-
-					p = NSBezierPath.alloc().init()
-
-					p.moveToPoint_(NSMakePoint(0, i))
-					p.lineToPoint_(NSMakePoint(1500 , i))
-					NSColor.redColor().set()
-					p.stroke()
+					except:
+						pass
 
 				fullpath.appendBezierPath_(path)
 				NSColor.blackColor().set()
 				fullpath.fill()
-				print(self.wrapper._showBound)
-				
 				
 		except:
 			print(traceback.format_exc())
+		try:
+			ascender = f.glyphs[i.glyphname].layers[m].master.ascender
+			capHeight = f.glyphs[i.glyphname].layers[m].master.capHeight
+			xHeight = f.glyphs[i.glyphname].layers[m].master.xHeight
+			descender = f.glyphs[i.glyphname].layers[m].master.descender
+			
+			for x in [ascender, capHeight, xHeight, descender, 0]:
 
+				path = NSBezierPath.alloc().init()
+
+				path.moveToPoint_(NSMakePoint(0, x*scale))
+				path.lineToPoint_(NSMakePoint(Width, x*scale))
+				NSColor.redColor().set()
+
+				transform = NSAffineTransform.transform()
+				transform.translateXBy_yBy_(0, Height/2.2)
+				path.transformUsingAffineTransform_(transform)
+
+				path.stroke()
+		except:
+			print(traceback.format_exc())
 
 class CanvasView(vanilla.VanillaBaseObject):
 	nsView = CanvasView_view

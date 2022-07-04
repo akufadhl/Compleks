@@ -24,8 +24,13 @@ class showWindow(object):
         self.w = vanilla.Window((self.windowW, self.windowH), "Red Block", minSize=(self.windowW, self.windowH+25))
         self.w.textEdit = vanilla.EditText((10, 10, -100, 22))
         self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export")
-        #self.w.preview = CanvasView((0,45,0,0))
-        self.w.view = CanvasView((0,45,0,self.windowH/1.5))
+        self.w.view = _CanvasView.alloc().init()
+        self.w.view.setFrame_(((0,0),(200,500)))
+        
+        self.w.scrollView = vanilla.ScrollView((10, 10, -10, -100),
+                            self.w.view)
+        print(self.w.view.enclosingScrollView())
+        # self.w.view = CanvasView((0,45,0,self.windowH/1.5))
         self.w.instanceName = vanilla.TextBox((10, self.windowH/1.25, -10, 22), "Instance :")
         self.w.fontSelector = vanilla.PopUpButton((100, self.windowH/1.25, -10, 20), ["Regular","Bold","Italic","Bold Italic"])
         
