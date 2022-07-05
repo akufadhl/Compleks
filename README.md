@@ -30,3 +30,7 @@ a tool to help kern and avoid collision in complx scripts. it only works for **B
 ## ToDo lists for Complex Shaper
 - [ ] a spacing algorithm for top marks
 - [ ] class optimizations
+
+##Credits and Special Thanks
+- Just Van Rossum
+- @florianpircher
