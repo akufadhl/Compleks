@@ -136,7 +136,7 @@ class HBShaping:
             xOff = pos.x_offset
             yOff = pos.y_offset
             width = self.font.get_glyph_extents(info.codepoint)
-            print(width.x_bearing, width.width)
+            # print(width.x_bearing, width.width)
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
         
         return infos 

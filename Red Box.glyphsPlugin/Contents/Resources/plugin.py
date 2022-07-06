@@ -11,10 +11,7 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
-from inspect import trace
-from tkinter import W
 import traceback
-from turtle import pos
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
@@ -58,7 +55,8 @@ class CanvasView_view(NSView):
 			
 			xAdv, yAdv = 0, 0
 			shaper = HB.shape(letters)
-
+			self.wrapper._textWidth = sum([x.glyphWidth.width for x in shaper])
+			print(self.wrapper._textWidth)
 			for i in shaper:
 
 				fullpath = NSBezierPath.alloc().init()
@@ -127,7 +125,7 @@ class CanvasView(vanilla.VanillaBaseObject):
 		self._m = None
 		self._posSize = posSize
 		self._showBound = False
-
+		self._textWidth = None
 		self._setupView(self.nsView, posSize)
 		self._nsObject.wrapper = self
 
@@ -207,6 +205,8 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._m = self.w.fontSelector.get()
 			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
+			if self.w.view._textWidth is not None:
+				self.w.view._setFrame(((0,0),((self.w.view._textWidth/2), self.windowH)))
 			self.w.view.redraw()
 			#self.w.view.process(texts)
 		except:
@@ -216,6 +216,7 @@ class ____PluginClassName____(GeneralPlugin):
 		try:
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._letters = self.w.textEdit.get()
+			self.w.view._setFrame(((0,0),(self.w.view._textWidth, self.windowH)))
 			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
