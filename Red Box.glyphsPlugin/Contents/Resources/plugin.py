@@ -11,7 +11,10 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
+from inspect import trace
+from tkinter import W
 import traceback
+from turtle import pos
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
@@ -21,7 +24,7 @@ from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTra
 
 
 class CanvasView_view(NSView):
-	
+
 	def init(self):
 		self = super(CanvasView_view, self).init()
 		return self
@@ -46,18 +49,18 @@ class CanvasView_view(NSView):
 		Binary = self.wrapper._binaryFont
 		m = self.wrapper._m
 		letters = str(self.wrapper._letters)
-
+		
 		if not letters:
 			return
 
 		try:
 			HB = HBShaping.fromPath(Binary)
-			shaper = HB.shape(letters)
-			self.wrapper._textWidth = sum([x.glyphWidth.width for x in shaper])
-			print(self.wrapper._textWidth)
+			
 			xAdv, yAdv = 0, 0
+			shaper = HB.shape(letters)
 
 			for i in shaper:
+
 				fullpath = NSBezierPath.alloc().init()
 				path = f.glyphs[i.glyphname].layers[m].completeBezierPath
 				transform = NSAffineTransform.transform()
@@ -66,6 +69,7 @@ class CanvasView_view(NSView):
 				
 				xAdv += i.xAd
 				yAdv += i.yAd
+
 				transform = NSAffineTransform.transform()
 				transform.scaleBy_( scale )
 				path.transformUsingAffineTransform_( transform )
@@ -73,9 +77,11 @@ class CanvasView_view(NSView):
 				transform = NSAffineTransform.transform()
 				transform.translateXBy_yBy_(20, Height/2.2)
 				path.transformUsingAffineTransform_(transform)
+				
 				if self.wrapper._showBound: #and (i.glyphname != "space"):
 					try:
 						bounds = path.bounds()
+
 						rect = NSRect( bounds.origin , bounds.size )
 						#fill rect with outline
 						NSColor.greenColor().set()
@@ -87,7 +93,7 @@ class CanvasView_view(NSView):
 				fullpath.appendBezierPath_(path)
 				NSColor.blackColor().set()
 				fullpath.fill()
-
+				
 		except:
 			print(traceback.format_exc())
 		try:
@@ -116,15 +122,14 @@ class CanvasView(vanilla.VanillaBaseObject):
 	nsView = CanvasView_view
 
 	def __init__(self, posSize):
-		self._setupView(self.nsView, posSize)
-		self._nsObject.wrapper = self
-
 		self._letters = ""
 		self._binaryFont = ""
 		self._m = None
 		self._posSize = posSize
 		self._showBound = False
-		self._textWidth = int()
+
+		self._setupView(self.nsView, posSize)
+		self._nsObject.wrapper = self
 
 	def redraw(self):
 		self._nsObject.setNeedsDisplay_(True)
@@ -163,7 +168,7 @@ class ____PluginClassName____(GeneralPlugin):
 			self.w.exportInstance = vanilla.Button((-90, 10, -10, 20), "Export", callback = self.Export_)
 			self.w.instanceName = vanilla.TextBox("auto", "Masters :")
 			self.w.fontSelector = vanilla.PopUpButton("auto", self.getMasters(), callback = self.textViewer)
-			self.w.showBounds = vanilla.CheckBox("auto", "Show BoundingBox", callback = self.changeView_)
+			self.w.showBounds = vanilla.CheckBox("auto", "Show BoundingBox", callback = self.textViewer)
 			
 			rules = [
 		    # Horizontal
@@ -197,13 +202,13 @@ class ____PluginClassName____(GeneralPlugin):
 	def textViewer(self, sender):
 		try:
 			self.w.view._letters = self.w.textEdit.get()
+			texts = self.w.textEdit.get()
 			binaries = self.getBinary()
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._m = self.w.fontSelector.get()
 			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
-			print(self.w.view._textWidth, self.windowW, self.windowH)
-			self.w.view._setFrame(((0,0),(self.w.view._textWidth, self.windowH)))
 			self.w.view.redraw()
+			#self.w.view.process(texts)
 		except:
 			print(traceback.format_exc())
 
@@ -211,7 +216,6 @@ class ____PluginClassName____(GeneralPlugin):
 		try:
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._letters = self.w.textEdit.get()
-			self.w.view._setFrame(((0,0),(self.w.view._textWidth, self.windowH)))
 			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
