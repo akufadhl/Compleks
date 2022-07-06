@@ -10,18 +10,18 @@ letters = "Ronnda"
 
 class GlyphInfo:
 
-    def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff, gWidth):
+    def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff, width):
         self.gid = gid
         self.glyphname = glyphname
         self.xAd = xAd
         self.yAd = yAd
         self.xOff = xOff
         self.yOff = yOff
-        self.glyphWidth = gWidth
+        self.glyphWidth = width
 
 
     def __repr__(self):
-        return "GlyphInfo(gid={}, glyphname={}, xAd={}, yAd={}, xOff={}, yOff={})".format(self.gid, self.glyphname, self.xAd, self.yAd, self.xOff, self.yOff)
+        return "GlyphInfo(gid={}, glyphname={}, xAd={}, yAd={}, xOff={}, yOff={}, glyphWidth={})".format(self.gid, self.glyphname, self.xAd, self.yAd, self.xOff, self.yOff, self.glyphWidth)
 
 class HBShaping:
     
@@ -136,7 +136,7 @@ class HBShaping:
             xOff = pos.x_offset
             yOff = pos.y_offset
             width = self.font.get_glyph_extents(info.codepoint)
-            print(width.x_bearing, width.width)
+            # print(width.x_bearing, width.width)
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
         
         return infos 
@@ -151,5 +151,9 @@ class HBShaping:
         return pen.path
 
 s = HBShaping.fromPath(Binary)
-print(s.shape(letters))
+shape = s.shape(letters)
+width = [x.glyphWidth.width for x in shape]
+print(sum(width))
+print(width)
+
 print(s.getMetrics(s._ttFont))
