@@ -1,13 +1,13 @@
+from email import message
 from fontTools.ttLib import TTFont
 from fontTools.pens.cocoaPen import CocoaPen
+from fontTools.ttLib.tables import otTables
 import uharfbuzz as hb
-import io, objc
+import io, re
 
-Binary = "/Users/fadhlschriftlabor/Repositories/slab-Ordina/EXPORT/1.005/CFF/Ordina-Regular.otf"
+Binary = "/Users/fadhlschriftlabor/Desktop/TuladhaJavanese-Regular.otf"
 # Binary01 = "/Users/fadhlschriftlabor/Documents/NotoSansMyanmar-Regular.otf"
-letters = "Ronnda"
-# letters01 = "က္ခ"
-
+letters = "ꦏꦿꦾꦸ"
 class GlyphInfo:
 
     def __init__(self, gid, glyphname, xAd, yAd, xOff, yOff, gWidth):
@@ -84,29 +84,33 @@ class HBShaping:
             features.append(feature)
 
         return features
-        # print(self._ttFont["GPOS"].table.LookupList.Lookup)
-        #return ttFont["GSUB"].table.LookupList.Lookup
+
+    def getMessage(self, buf):
+        lastmessage = []
+        messages = []
+        infos_trace = []
+        positions_trace = []
+
+        def handleMsg(msg):
+            nonlocal lastmessage
+            nonlocal messages
+
+            if msg.startswith("start"):
+                 lastmessage = tuple([g.codepoint for g in buf.glyph_infos])
+            if msg.startswith("end"):
+                lookup = re.findall("(\d+)", msg)
+                thismessage = tuple([g.codepoint for g in buf.glyph_infos])
+                if lastmessage != thismessage:
+                    glyphlist = [self.glyphOrder[g.codepoint] for g in buf.glyph_infos]
+                    messages.append("After lookup %s: %s" % (lookup, "|".join(glyphlist)))
+            
+            infos_trace.append(buf.glyph_infos)
+            positions_trace.append(buf.glyph_positions)
+        
+        return handleMsg, messages
 
     def getLookupId(self, ttFont):
         pass
-
-    #code are taken from Simon Cozens' Font Goggles fork
-    def buildMessageHistoryFunction(self, buf):
-            lastmessage = []
-            resultlist = []
-            def handle_message(msg):
-                nonlocal resultlist
-                nonlocal lastmessage
-                resultlist.append((msg, [g.codepoint for g in buf.glyph_infos]))
-            #     if msg.startswith("start"):
-            #         lastmessage = tuple([g.codepoint for g in buf.glyph_infos])
-            #     if msg.startswith("end"):
-            #         lookup = re.findall("(\d+)", msg)
-            #         thismessage = tuple([g.codepoint for g in buf.glyph_infos])
-            #         if lastmessage != thismessage:
-            #             glyphlist = [self.glyphOrder[g.codepoint] for g in buf.glyph_infos]
-            #             resultlist.append("After lookup %i: %s" % (int(lookup[0]), "|".join(glyphlist)))
-            return handle_message, resultlist
     
     def shape(self, text, features=None, direction=None):
         if features is None:
@@ -121,8 +125,9 @@ class HBShaping:
         buf.guess_segment_properties()
         buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
 
-        # msgfunc = self.buildMessageHistoryFunction(buf)
-        # buf.set_message_func(msgfunc)
+        msgfunc, message = self.getMessage(buf)
+        
+        buf.set_message_func(msgfunc)
 
         hb.shape(self.font, buf)
         # glyphOrder = self.glyphOrder
@@ -139,7 +144,7 @@ class HBShaping:
             # print(width.x_bearing, width.width)
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
         
-        return infos 
+        return infos, message
 
     def drawPath(self, gid):
         pen = CocoaPen(None)
@@ -151,5 +156,7 @@ class HBShaping:
         return pen.path
 
 s = HBShaping.fromPath(Binary)
-print(s.shape(letters))
-print(s.getMetrics(s._ttFont))
+letters = s.shape(letters)
+print(letters)
+for a in letters[1]:
+    print(a)
