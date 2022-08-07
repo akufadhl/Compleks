@@ -11,129 +11,12 @@
 #
 ###########################################################################################################
 from __future__ import division, print_function, unicode_literals
-import traceback
-import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
-from HBShaper import HBShaping
-import os, vanilla
-from AppKit import NSView, NSColor, NSBezierPath, NSWidth, NSHeight, NSAffineTransform, NSScreen, NSFrameRect, NSRect, NSMakePoint
+from shaperView import ShaperView
+import os, vanilla, objc, traceback
+from AppKit import NSScreen
 
-
-class ShaperView_view(NSView):
-
-	def init(self):
-		self = super(ShaperView_view, self).init()
-		return self
-		
-	def drawRect_(self,rect):
-
-		try:
-			f = Glyphs.font
-			NSColor.whiteColor().set()
-			NSBezierPath.fillRect_(rect)
-			Width = NSWidth(self.frame())
-			Height = NSHeight(self.frame())
-
-			scale = 0.38 / (f.upm / min(Width, Height))
-
-			if f is None:
-				return
-		except:
-			print("Error:", traceback.format_exc())
-
-		#Process string and get glyphs info using uharfbuzz
-		Binary = self.wrapper._binaryFont
-		m = self.wrapper._m
-		letters = str(self.wrapper._letters)
-		
-		if not letters:
-			return
-
-		try:
-			HB = HBShaping.fromPath(Binary)
-			
-			xAdv, yAdv = 0, 0
-			shaper = HB.shape(letters)
-			self.wrapper._textWidth = sum([x.glyphWidth.width for x in shaper])
-			print(self.wrapper._textWidth)
-			for i in shaper:
-
-				fullpath = NSBezierPath.alloc().init()
-				path = f.glyphs[i.glyphname].layers[m].completeBezierPath
-				transform = NSAffineTransform.transform()
-				transform.translateXBy_yBy_(xAdv + i.xOff, yAdv + i.yOff)
-				path.transformUsingAffineTransform_( transform )
-				
-				xAdv += i.xAd
-				yAdv += i.yAd
-
-				transform = NSAffineTransform.transform()
-				transform.scaleBy_( scale )
-				path.transformUsingAffineTransform_( transform )
-				
-				transform = NSAffineTransform.transform()
-				transform.translateXBy_yBy_(20, Height/2.2)
-				path.transformUsingAffineTransform_(transform)
-				
-				if self.wrapper._showBound: #and (i.glyphname != "space"):
-					try:
-						bounds = path.bounds()
-
-						rect = NSRect( bounds.origin , bounds.size )
-						#fill rect with outline
-						NSColor.greenColor().set()
-						NSFrameRect(rect)
-					
-					except:
-						pass
-
-				fullpath.appendBezierPath_(path)
-				NSColor.blackColor().set()
-				fullpath.fill()
-				
-		except:
-			print(traceback.format_exc())
-		try:
-			ascender = f.glyphs[i.glyphname].layers[m].master.ascender
-			capHeight = f.glyphs[i.glyphname].layers[m].master.capHeight
-			xHeight = f.glyphs[i.glyphname].layers[m].master.xHeight
-			descender = f.glyphs[i.glyphname].layers[m].master.descender
-			
-			for x in [ascender, capHeight, xHeight, descender, 0]:
-
-				path = NSBezierPath.alloc().init()
-
-				path.moveToPoint_(NSMakePoint(0, x*scale))
-				path.lineToPoint_(NSMakePoint(Width, x*scale))
-				NSColor.redColor().set()
-
-				transform = NSAffineTransform.transform()
-				transform.translateXBy_yBy_(0, Height/2.2)
-				path.transformUsingAffineTransform_(transform)
-
-				path.stroke()
-		except:
-			print(traceback.format_exc())
-
-class ShaperView(vanilla.VanillaBaseObject):
-	nsView = ShaperView_view
-
-	def __init__(self, posSize):
-		self._letters = ""
-		self._binaryFont = ""
-		self._m = None
-		self._posSize = posSize
-		self._showBound = False
-		self._textWidth = None
-		self._setupView(self.nsView, posSize)
-		self._nsObject.wrapper = self
-
-	def redraw(self):
-		self._nsObject.setNeedsDisplay_(True)
-	
-	def _getNSView(self):
-		return self._nsObject
 
 class ComplexShaping(GeneralPlugin):
 
@@ -159,7 +42,7 @@ class ComplexShaping(GeneralPlugin):
 			try:
 				self.w.view = ShaperView((0,0,0,0))
 				self.w.view._setFrame(((0,0),(self.windowW, self.windowH)))
-				self.w.scroll = vanilla.ScrollView((0,0,0,0), self.w.view._getNSView(), hasHorizontalScroller=True, hasVerticalScroller=False, drawsBackground=False)
+				self.w.scroll = vanilla.ScrollView((0,40,0,-60), self.w.view._getNSView(), hasHorizontalScroller=True, hasVerticalScroller=False, drawsBackground=False)
 			except:
 				print(traceback.format_exc())
 			self.w.textEdit = vanilla.EditText((10, 10, -100, 22), callback = self.textViewer)
@@ -200,26 +83,27 @@ class ComplexShaping(GeneralPlugin):
 	def textViewer(self, sender):
 		try:
 			self.w.view._letters = self.w.textEdit.get()
-			texts = self.w.textEdit.get()
 			binaries = self.getBinary()
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._m = self.w.fontSelector.get()
 			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
 			if self.w.view._textWidth is not None:
-				self.w.view._setFrame(((0,0),((self.w.view._textWidth/2), self.windowH)))
+				self.w.view._setFrame(((0,0),((self.w.view._textWidth/3), self.windowH)))
 			self.w.view.redraw()
 			#self.w.view.process(texts)
 		except:
 			print(traceback.format_exc())
 
 	def changeView_(self, sender):
-		try:
-			self.w.view._showBound = self.w.showBounds.get()
-			self.w.view._letters = self.w.textEdit.get()
-			self.w.view._setFrame(((0,0),(self.w.view._textWidth, self.windowH)))
-			self.w.view.redraw()
-		except:
-			print(traceback.format_exc())
+
+		self.w.view._showBound = self.w.showBounds.get()
+		if self.w.view._textWidth is not None:
+			self.w.view._setFrame(((0,0),((self.w.view._textWidth/3), self.w.scroll.getPosSize()[3])))
+		# self.w.view._letters = self.w.textEdit.get()
+		# Height = self.w.scroll.getPosSize()[3]
+		# if self.w.view._textWidth is not None:
+		# 	self.w.view._setFrame(((0,0),((self.w.view._textWidth/2), Height)))
+		self.w.view.redraw()
 	
 	def getMasters(self):
 		try:

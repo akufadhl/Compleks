@@ -144,7 +144,7 @@ class HBShaping:
             # print(width.x_bearing, width.width)
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
         
-        return infos, message
+        return infos
 
     def drawPath(self, gid):
         pen = CocoaPen(None)
@@ -155,8 +155,8 @@ class HBShaping:
         #             
         return pen.path
 
-s = HBShaping.fromPath(Binary)
-letters = s.shape(letters)
-print(letters)
-for a in letters[1]:
-    print(a)
+# s = HBShaping.fromPath(Binary)
+# letters = s.shape(letters)
+# print(letters)
+# for a in letters[1]:
+#     print(a)
