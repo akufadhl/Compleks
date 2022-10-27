@@ -15,7 +15,7 @@ class glyphObject(object):
     def __str__(self):
         pass
 
-class kerningPairs(object):
+class kerningPair(object):
 
     def __init__(self, value: int, Affected: list, Affecting: list, Affector: list = None):
         self.value = value
@@ -28,3 +28,12 @@ class kerningPairs(object):
 
     def kern():
         pass
+
+    def asFea():
+        pass
+
+class pairs(object):
+
+    def __init__(self):
+        self.lookup = None
+        self.pairs = None
