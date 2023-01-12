@@ -53,7 +53,7 @@ class HBShaping:
         xHeight = ttFont['OS/2'].sxHeight
         capHeight = ttFont['OS/2'].sCapHeight
 
-        print("ascender: %s" % ascender, "descender: %s" % descender, "xHeight: %s" % xHeight, "capHeight: %s" % capHeight)
+        # print("ascender: %s" % ascender, "descender: %s" % descender, "xHeight: %s" % xHeight, "capHeight: %s" % capHeight)
         return ascender, descender, xHeight, capHeight
 
     def getFeatures(self, ttFont):
@@ -123,6 +123,7 @@ class HBShaping:
             buf.direction(direction)
 
         buf.guess_segment_properties()
+
         buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
 
         msgfunc, message = self.getMessage(buf)
@@ -143,6 +144,7 @@ class HBShaping:
             width = self.font.get_glyph_extents(info.codepoint)
             # print(width.x_bearing, width.width)
             infos.append(GlyphInfo(info.codepoint, glyphName, xAdv, yAdv, xOff, yOff, width))
+            # print(info.cluster)
         
         return infos
 
@@ -150,13 +152,5 @@ class HBShaping:
         pen = CocoaPen(None)
         self.font.draw_glyph_with_pen(gid, pen)
         path = pen.path
-        #origin = path.bounds().origin
-        #size = path.bounds().size
-        #             
+            
         return pen.path
-
-# s = HBShaping.fromPath(Binary)
-# letters = s.shape(letters)
-# print(letters)
-# for a in letters[1]:
-#     print(a)

@@ -14,8 +14,9 @@ from __future__ import division, print_function, unicode_literals
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 from shaperView import ShaperView
+from HBShaper import HBShaping
 import os, vanilla, objc, traceback
-from AppKit import NSScreen
+from AppKit import NSScreen, NSWidth, NSHeight
 
 
 class ComplexShaping(GeneralPlugin):
@@ -41,7 +42,9 @@ class ComplexShaping(GeneralPlugin):
 			self.w = vanilla.Window((self.windowW, self.windowH), "Complex Preview", minSize=((self.windowW/2), self.windowH))
 			try:
 				self.w.view = ShaperView((0,0,0,0))
-				self.w.view._setFrame(((0,0),(self.windowW, self.windowH)))
+				self.w.view._setFrame(((0,0),(0, 0)))
+				# self.w.scroll = vanilla.ScrollView((0,40,0,-60), self.w.view._getNSView(), hasHorizontalScroller=True, hasVerticalScroller=False, drawsBackground=False)
+				# has_horizontal_scroller = view_width > window_width
 				self.w.scroll = vanilla.ScrollView((0,40,0,-60), self.w.view._getNSView(), hasHorizontalScroller=True, hasVerticalScroller=False, drawsBackground=False)
 			except:
 				print(traceback.format_exc())
@@ -80,6 +83,18 @@ class ComplexShaping(GeneralPlugin):
 		Glyphs.removeCallback(self.createNotdef_)
 
 	@objc.python_method
+	def shapeText(self, text, binary):
+		try:
+			shaper = HBShaping.fromPath(binary)
+
+			if text:
+				shaping = shaper.shape(text)
+				return shaping
+
+		except:
+			print(traceback.format_exc())
+
+	@objc.python_method
 	def textViewer(self, sender):
 		try:
 			self.w.view._letters = self.w.textEdit.get()
@@ -87,8 +102,11 @@ class ComplexShaping(GeneralPlugin):
 			self.w.view._showBound = self.w.showBounds.get()
 			self.w.view._m = self.w.fontSelector.get()
 			self.w.view._binaryFont = binaries[self.w.fontSelector.get()]
+			print(self.w.view._getNSView().frame().size.width)
+			self.w.view._glyphData = self.shapeText(str(self.w.textEdit.get()), binaries[self.w.fontSelector.get()])
+
 			if self.w.view._textWidth is not None:
-				self.w.view._setFrame(((0,0),((self.w.view._textWidth/3), self.windowH)))
+				self.w.view.setPosSize((0, 0, self.w.view._textWidth, 0))
 			self.w.view.redraw()
 			#self.w.view.process(texts)
 		except:
@@ -97,12 +115,6 @@ class ComplexShaping(GeneralPlugin):
 	def changeView_(self, sender):
 
 		self.w.view._showBound = self.w.showBounds.get()
-		if self.w.view._textWidth is not None:
-			self.w.view._setFrame(((0,0),((self.w.view._textWidth/3), self.w.scroll.getPosSize()[3])))
-		# self.w.view._letters = self.w.textEdit.get()
-		# Height = self.w.scroll.getPosSize()[3]
-		# if self.w.view._textWidth is not None:
-		# 	self.w.view._setFrame(((0,0),((self.w.view._textWidth/2), Height)))
 		self.w.view.redraw()
 	
 	def getMasters(self):
@@ -153,6 +165,7 @@ class ComplexShaping(GeneralPlugin):
 			self.w.view.redraw()
 		except:
 			print(traceback.format_exc())
+	
 	@objc.python_method
 	def close(self, sender):
 		try:
