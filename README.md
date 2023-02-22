@@ -2,6 +2,13 @@
 
 Complex plugin is a series of my personal GlyphsApp plugins to help me work with complex script. it consists of several plugins.
 
+## Warning
+you have to install uharfbuzz and not use Glyphsapp's python, or else it will crash your Glyphsapp.
+
+```
+pip install uharfbuzz
+```
+
 ## General ToDo lists
 - [ ] integrate **Complex Spacer** with **Complex Shaper**
 
